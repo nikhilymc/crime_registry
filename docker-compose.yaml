@@ -1,0 +1,92 @@
+version: '2.0'
+services:
+  client:
+    container_name: crimeregistry-client
+    expose:
+      - 3000
+    ports:
+      - 3000:3000
+    build:
+      context: .
+      dockerfile: ./CrimeRegistryClient/Dockerfile
+    volumes:
+      - '.:/project/crimeregistry'
+
+  crimeregistry_processor:
+    container_name: crimeregistry_processor
+    build:
+      context: .
+      dockerfile: ./CrimeRegistryProcessor/Dockerfile
+    depends_on:
+      - validator
+    volumes:
+      - '.:/project/crimeregistry'
+
+  crimedelete_processor:
+    container_name: crimedelete_processor
+    build:
+      context: .
+      dockerfile: ./CrimeDeleteProcessor/Dockerfile
+    depends_on:
+      - validator
+    volumes:
+      - '.:/project/crimeregistry'
+
+
+  crimeregistryevent:
+    container_name: crimeregistry-event
+    build:
+      context: .
+      dockerfile: CrimeRegistryEvent/Dockerfile
+    depends_on:
+        - validator
+    volumes:
+        - '.:/project/crimeregistry'
+      
+  sawtooth-rest-api:
+    container_name: rest-api
+    image: hyperledger/sawtooth-rest-api:1.0
+    expose:
+      - 8008
+    ports:
+      - '8008:8008'
+    depends_on:
+      - validator
+    entrypoint: |
+      sawtooth-rest-api -vvv
+        --connect tcp://validator:4004
+        --bind sawtooth-rest-api:8008
+
+  settings-tp:
+    image: hyperledger/sawtooth-settings-tp:1.0
+    depends_on:
+      - validator
+    command: settings-tp -vv --connect tcp://validator:4004
+
+  identity-tp:
+    image: hyperledger/sawtooth-identity-tp:1.0
+    container_name: sawtooth-identity-tp-default
+    depends_on:
+      - validator
+    entrypoint: identity-tp -vvv -C tcp://validator:4004
+
+  validator:
+    container_name: validator
+    image: hyperledger/sawtooth-validator:1.0
+    expose:
+      - 4004
+    ports:
+      - '4004:4004'
+    command: |
+      bash -c "
+        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
+        sawadm keygen &&
+        sawtooth keygen my_key &&
+        sawset genesis -k /root/.sawtooth/keys/my_key.priv &&
+        sawadm genesis config-genesis.batch
+        fi;
+        sawtooth-validator -vvv \
+          --endpoint tcp://validator:8800 \
+          --bind component:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
+          --scheduler parallel -vv"

@@ -1,0 +1,16 @@
+{
+  "name": "crimeregistryprocessor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node Processor.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "crypto": "^1.0.1",
+    "sawtooth-sdk": "^1.0.5",
+    "text-encoding": "^0.7.0"
+  }
+}
